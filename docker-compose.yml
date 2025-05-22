@@ -28,11 +28,13 @@ services:
       - elasticsearch
 
   app:
-    image: node:18
+    image: node:18-alpine
     working_dir: /app
     volumes:
       - ./app:/app
     command: ["node", "app.js"]
+    ports:
+      - "3000:3000"
     logging:
       driver: "fluentd"
       options:
@@ -40,3 +42,5 @@ services:
         tag: docker.app
     depends_on:
       - fluentd
+    restart: on-failure
+
