@@ -1,24 +1,27 @@
-version: '3.7'
+version: "3.8"
 
 services:
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.10
+    image: arm64v8/elasticsearch:7.17.10
     environment:
       - discovery.type=single-node
+      - xpack.security.enabled=false
     ports:
       - "9200:9200"
+    mem_limit: 1g
 
   kibana:
-    image: docker.elastic.co/kibana/kibana:7.17.10
-    ports:
-      - "5601:5601"
+    image: arm64v8/kibana:7.17.10
     environment:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
     depends_on:
       - elasticsearch
 
   fluentd:
-    build: ./fluentd
+    build:
+      context: ./fluentd
     ports:
       - "24224:24224"
       - "24224:24224/udp"
@@ -27,12 +30,23 @@ services:
     depends_on:
       - elasticsearch
 
-  app:
-    image: node:18-alpine
-    working_dir: /app
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
     volumes:
-      - ./app:/app
-    command: ["node", "app.js"]
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+
+  grafana:
+    image: grafana/grafana-oss:latest
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
+
+  app:
+    build:
+      context: ./app
     ports:
       - "3000:3000"
     logging:
@@ -42,5 +56,5 @@ services:
         tag: docker.app
     depends_on:
       - fluentd
+      - prometheus
     restart: on-failure
-
